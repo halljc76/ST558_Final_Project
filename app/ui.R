@@ -71,7 +71,8 @@ shinyUI(
       sidebarLayout(
         sidebarPanel(
           h4("Add Conditions to Filter Data"),
-          uiOutput("conditionButton"),
+          actionButton("addFilterCond", label = "Wait for Data...",
+                       class = "btn-primary"),
           div(id = "conditions"),
           actionButton(inputId = "doFilter", label = "Filter Data",
                        btn = "class-secondary"),

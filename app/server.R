@@ -8,16 +8,13 @@ shinyServer(
                              types = c(rep("Quant", 10), rep("Qual", 45)),
                              dataExplore = NULL)
     
+   
+    
     observe({
       if (is.null(values$data)) {
         values$data <- read.table(gzfile("data/covtype.data.gz"),header = F,sep = ",")
-        output$conditionButton <- renderUI({
-          fluidRow(
-            actionButton("addFilterCond", label = "Click!",
-                         class = "btn-primary")
-          )
-        })
-      }
+        updateActionButton(inputId = "addFilterCond", label = "Click!")
+      } 
     })
     
     observeEvent(input$addFilterCond, {
