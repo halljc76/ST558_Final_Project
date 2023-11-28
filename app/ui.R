@@ -24,7 +24,7 @@ shinyUI(
                  h3(tags$b("Title 1: Origin of Dataset", style = "color:white")),
                  h4("This dataset contains cartographic information derived from data originally 
                    from the United States Geological Survey (USGS) and United States Forestry Service (USFS) 
-                   about wilderness areas within the Roosevelt National Forest, Colorado. 
+                   about wilderness areas within the Roosevelt National Forest, Colorado (the background image!). 
                    
                    The observations within are, per Jock Blackard, the author of this dataset, 
                    and Colorado State University, characteristic of areas within minimal human 
@@ -67,7 +67,16 @@ shinyUI(
       )
     ),
     tabPanel(
-      title = "Data Exploration"
+      title = "Data Exploration",
+      sidebarLayout(
+        sidebarPanel(
+          h4("Add Conditions to Filter Data"),
+          uiOutput("conditionButton"),
+          div(id = "conditions"),
+          style = "overflow-y:scroll; height:600px;"
+        ),
+        mainPanel()
+      )
     ),
     tabPanel(
       title = "Modeling"
