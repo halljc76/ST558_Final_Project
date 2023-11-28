@@ -1,0 +1,1 @@
+data <- read.table(gzfile("covtype.data.gz"),header = F,sep = ",")
