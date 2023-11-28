@@ -73,6 +73,8 @@ shinyUI(
           h4("Add Conditions to Filter Data"),
           uiOutput("conditionButton"),
           div(id = "conditions"),
+          actionButton(inputId = "doFilter", label = "Filter Data",
+                       btn = "class-secondary"),
           style = "overflow-y:scroll; height:600px;"
         ),
         mainPanel()

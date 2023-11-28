@@ -7,3 +7,5 @@ colnames(data) <- append(c(
   "Wilderness_Rawah", "Wilderness_Neota", "Wilderness_Comanche",
   "Wilderness_Cache"
 ), c(sapply(1:40, function(j) {paste0("Soil_Type_",toString(j))}), "Cover_Type"))
+
+types <- c(rep("Quant", 10), rep("Qual", 45))
