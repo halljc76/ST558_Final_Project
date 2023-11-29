@@ -13,6 +13,7 @@ shinyServer(
     observe({
       if (is.null(values$data)) {
         values$data <- read.table(gzfile("data/covtype.data.gz"),header = F,sep = ",")
+        values$dataExplore <- values$data
         updateActionButton(inputId = "addFilterCond", label = "Click!")
         sapply(c("varSelect", "plot1Vars", "plot2XVar", "plot2YVar",
                  "plot2Grouping", "summaryVars"), function(id) {
@@ -87,5 +88,65 @@ shinyServer(
         values$dataExplore <- temp
       }
     })
+    
+    observeEvent({input$plot1Vars
+                  input$plot1Type
+                  values$dataExplore}, {
+                    if (!is.null(values$dataExplore) && input$plot1Vars != "") {
+                      temp <- data.frame(y = values$dataExplore[,input$plot1Vars])
+                      if (input$plot1Type == "Histogram") {
+                        output$plot1 <- renderPlot({
+                          ggplot(data = temp) + 
+                            geom_histogram(aes(x = y),bins = input$numHistBins) + 
+                            labs(
+                              x = input$plot1Vars,
+                              y = "Count"
+                            ) + theme_classic()
+                        })
+                      } else {
+                        output$plot1 <- renderPlot({
+                          ggplot(data = temp) + 
+                            geom_boxplot(aes(y = y)) + labs(
+                              y = input$plot1Vars
+                            ) + theme_classic() +
+                            theme(axis.title.x=element_blank(),
+                                  axis.text.x=element_blank(),
+                                  axis.ticks.x=element_blank())
+                        })
+                      } 
+                    }
+                  })
+    
+    observeEvent({input$plot2XVar
+                  input$plot2YVar
+                  input$plot2Grouping
+                  input$plot2Group
+                  input$plot2Type
+                  values$dataExplore}, {
+                    if (!is.null(values$dataExplore) &&
+                        input$plot2XVar != "" &&
+                        input$plot2YVar != "" 
+                        ) {
+                      temp <- data.frame(
+                        x = values$dataExplore[,input$plot2XVar],
+                        y = values$dataExplore[,input$plot2YVar]
+                      )
+                        if (input$plot2Type == "Scatterplot") {
+                          if (input$plot2Group) {
+                            temp <- cbind(temp, 
+                                          data.frame(group = values$dataExplore[,input$plot2Grouping]))
+                            output$plot2 <- renderPlot({
+                              ggplot(data = temp) + geom_point(
+                                aes(x = x, y = y, color = group)) +
+                                theme_classic() + labs(
+                                  x = input$plot2XVar,
+                                  y = input$plot2YVar,
+                                  color = input$plot2Grouping
+                                )
+                            })
+                          } 
+                        }
+                      }
+                  })
   }
 )

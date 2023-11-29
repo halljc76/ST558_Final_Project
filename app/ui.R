@@ -85,7 +85,11 @@ shinyUI(
             column(width = 6,
                    selectInput("plot1Type", label = "Plot #1 Visualization",
                                choices = c("Histogram", "Boxplot"), 
-                               multiple = F))
+                               multiple = F),
+                   conditionalPanel("input.plot1Type == 'Histogram'",
+                                    numericInput("numHistBins",
+                                                 label = "Specify Number of Bins",
+                                                 value = 10, min = 1)))
           ),
           fluidRow(
             column(width = 4,
@@ -103,12 +107,12 @@ shinyUI(
             column(
               width = 6,
             checkboxInput("plot2Group", 
-                          label = "Add a Grouping Variable for Plot 2?",
+                          label = "Add a Grouping/Coloring Variable for Plot 2?",
                           value = F)),
             column(width = 6,
             conditionalPanel(
               condition = "input.plot2Group == true",
-              selectInput("plot2Grouping", label = "Plot #2 Grouping Variable",
+              selectInput("plot2Grouping", label = "Plot #2 Grouping/Coloring Variable",
                           choices = NULL, multiple = F)
                 )
               )
@@ -124,14 +128,14 @@ shinyUI(
             column(width = 6,
                    panel(
                      heading = "Plot #1",
-                     plotOutput("plot1"),
+                     addSpinner(plotOutput("plot1",height = "275px")),
                      style = "height:300px;"
                    )
             ),
             column(width = 6,
                    panel(
                      heading = "Plot #2",
-                     plotOutput("plot2"),
+                     addSpinner(plotOutput("plot2", height = "275px")),
                      style = "height:300px;"
                    )
                    ),
