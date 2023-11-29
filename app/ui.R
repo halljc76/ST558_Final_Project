@@ -38,7 +38,7 @@ shinyUI(
                    where their work on utilizing neural networks and discriminant analysis to predict 
                    these forest cover types leads to the structure of the dataset seen here. 
                    
-                   A total of twelve cartographic measures were utitags$lized as independent variables 
+                   A total of twelve cartographic measures were utilized as independent variables 
                    in the predictive models, while seven major forest cover types were used as 
                    dependent variables.", style = "color:white"),
                  tags$ul(
@@ -76,9 +76,72 @@ shinyUI(
           div(id = "conditions"),
           actionButton(inputId = "doFilter", label = "Filter Data",
                        btn = "class-secondary"),
+          hr(),
+          h4("Select Variables to Visualize"),
+          fluidRow(
+            column(width = 6,
+                   selectInput("plot1Vars", label = "Plot #1 Variable",
+                               choices = NULL, multiple = F)),
+            column(width = 6,
+                   selectInput("plot1Type", label = "Plot #1 Visualization",
+                               choices = c("Histogram", "Boxplot"), 
+                               multiple = F))
+          ),
+          fluidRow(
+            column(width = 4,
+                   selectInput("plot2XVar", label = "Plot #2 X-Variable",
+                               choices = NULL, multiple = F)),
+            column(width = 4,
+                   selectInput("plot2YVar", label = "Plot #2 Y-Variable",
+                               choices = NULL, multiple = F)),
+            column(width = 4,
+                   selectInput("plot2Type", label = "Plot #2 Visualization",
+                               choices = c("Scatterplot", "Barplot"), 
+                               multiple = F))
+          ),
+          fluidRow(
+            column(
+              width = 6,
+            checkboxInput("plot2Group", 
+                          label = "Add a Grouping Variable for Plot 2?",
+                          value = F)),
+            column(width = 6,
+            conditionalPanel(
+              condition = "input.plot2Group == true",
+              selectInput("plot2Grouping", label = "Plot #2 Grouping Variable",
+                          choices = NULL, multiple = F)
+                )
+              )
+          ),
+          hr(),
+          h4("Select Variables to Summarize"),
+          selectInput("summaryVars", label = "Select Variable(s)", 
+                      choices = NULL, multiple = T),
           style = "overflow-y:scroll; height:600px;"
         ),
-        mainPanel()
+        mainPanel(
+          fluidRow(
+            column(width = 6,
+                   panel(
+                     heading = "Plot #1",
+                     plotOutput("plot1"),
+                     style = "height:300px;"
+                   )
+            ),
+            column(width = 6,
+                   panel(
+                     heading = "Plot #2",
+                     plotOutput("plot2"),
+                     style = "height:300px;"
+                   )
+                   ),
+            
+          ),
+          fluidRow(
+            panel(heading = "Summary",
+                  uiOutput("summary"))
+          )
+        )
       )
     ),
     tabPanel(

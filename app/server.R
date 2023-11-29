@@ -14,6 +14,12 @@ shinyServer(
       if (is.null(values$data)) {
         values$data <- read.table(gzfile("data/covtype.data.gz"),header = F,sep = ",")
         updateActionButton(inputId = "addFilterCond", label = "Click!")
+        sapply(c("varSelect", "plot1Vars", "plot2XVar", "plot2YVar",
+                 "plot2Grouping", "summaryVars"), function(id) {
+                   updateSelectInput(inputId = id, choices = colnames(values$data),
+                                     selected = colnames(values$data)[1])
+                 })
+        
       } 
     })
     
