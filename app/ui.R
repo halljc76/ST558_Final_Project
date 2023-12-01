@@ -143,13 +143,87 @@ shinyUI(
           ),
           fluidRow(
             panel(heading = "Summary",
-                  uiOutput("summary"))
+                  verbatimTextOutput("summary"))
           )
         )
       )
     ),
     tabPanel(
-      title = "Modeling"
+      title = "Modeling",
+      tags$style(HTML("
+        .tabbable > .nav > li > a[data-value='Modeling Info'] {background-color: grey; color:white}
+        .tabbable > .nav > li > a[data-value='Model Fitting'] {background-color: grey; color:white}
+        .tabbable > .nav > li > a[data-value='Prediction'] {background-color: grey; color:white}
+        .tabbable > .nav > li[class=active]    > a {background-color: white; color:orange}
+      ")),
+      tabsetPanel(
+        tabPanel(title = "Modeling Info", style = "background-color: #FFFFFF !important"),
+        tabPanel(title = "Model Fitting",
+                 sidebarLayout(
+                   sidebarPanel(
+                     h4("Train-Test Split Parameters"),
+                     numericInput("splitProp", label = "Proportion of Data in Train Set",
+                                  value = 0.7, min = 0, max = 1,step = 0.1),
+                     hr(),
+                     
+                     h4("Random Forest Hyperparameters"),
+                     fluidRow(
+                       column(width = 6,
+                              selectInput("mtrySel", 
+                                          label = "Select Possible Number of Parameters for Random Forests",
+                                          choices = NULL,multiple = T)),
+                       column(width = 6,
+                              numericInput("kfoldCVSel",
+                                          label = "Select Number of Folds for CV, k",
+                                          min = 1, value = 5))
+                     ),
+                     selectInput("rfParams", label = "Specify Predictors for Random Forest Model",
+                                 choices = NULL, multiple = T),
+                     
+                     hr(),
+                     
+                     h4("Multinomial Logistic Regression Hyperparameters"),
+                     selectInput("mlrParams", label = "Specify Predictors for Logistic Regression Model",
+                                 choices = NULL, multiple = T),
+                     
+                     hr(),
+                     actionButton("trainModels", label = "Train Both Models")
+                   ),
+                   mainPanel(
+                     fluidRow(
+                       column(width = 6,
+                              panel(
+                                heading = "Random Forest Model",
+                                h6("Note: Column headings are reference values!"),
+                                  tableOutput("rfTable"),
+                                style = "overflow-x:scroll;
+                                         overflow-y:scroll; 
+                                         height:250px;"
+                              )
+                       ),
+                       column(width = 6,
+                              panel(
+                                heading = "Logistic Regression Model",
+                                h6("Note: Column headings are reference values!"),
+                                tableOutput("mlrTable"),
+                                style = "overflow-x:scroll;
+                                         overflow-y:scroll; 
+                                         height:250px;"
+                              )
+                       ),
+                       
+                     ),
+                     fluidRow(
+                       column(width = 12,
+                         panel(heading = "Training Results",
+                               uiOutput("trainResults"))
+                       )
+                     )
+                   )
+                 ),
+                 style = "background-color: #FFFFFF !important"),
+        tabPanel(title = "Prediction",style = "background-color: #FFFFFF !important")
+      )
     ),
     footer = tags$footer(
       style = "text-align: center; padding: 10px; background-color: #f4f4f4;

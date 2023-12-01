@@ -1,27 +1,76 @@
 library(shiny)
 library(ggplot2)
 library(dplyr)
+library(shinyalert)
+library(caret)
+library(nnet)
+library(DT)
+library(tidyr)
 
 shinyServer(
   function(input, output, session) {
     values <- reactiveValues(data = NULL, conditionIndex = 0,
                              types = c(rep("Quant", 10), rep("Qual", 45)),
-                             dataExplore = NULL)
+                             dataExplore = NULL,
+                             readyForModelTab = F,
+                             readyForTrain = F,
+                             dataModel = NULL,
+                             mlr = NULL,
+                             rf = NULL)
     
    
     
     observe({
       if (is.null(values$data)) {
-        values$data <- read.table(gzfile("data/covtype.data.gz"),header = F,sep = ",")
+        print("Read in Data")
+        load("./data/preprocessed.RData")
+        # values$data <- read.table(gzfile("data/covtype.data.gz"),header = F,sep = ",")
+        # colnames(values$data) <- append(c(
+        #   "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
+        #   "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
+        #   "Hillshade_9AM", "Hillshade_12PM", "Hillshade_3PM",
+        #   "Horizontal_Distance_To_Fire_Points", 
+        #   "Wilderness_Rawah", "Wilderness_Neota", "Wilderness_Comanche",
+        #   "Wilderness_Cache"
+        # ), c(sapply(1:40, function(j) {paste0("Soil_Type_",toString(j))}), 
+        #      "Cover_Type"))
+        values$data <- data
+        values$dataModel <- dataModel
         values$dataExplore <- values$data
+        
+        print("Update Cols")
         updateActionButton(inputId = "addFilterCond", label = "Click!")
         sapply(c("varSelect", "plot1Vars", "plot2XVar", "plot2YVar",
                  "plot2Grouping", "summaryVars"), function(id) {
                    updateSelectInput(inputId = id, choices = colnames(values$data),
                                      selected = colnames(values$data)[1])
                  })
-        
       } 
+    })
+    
+    observeEvent({input$summaryVars}, {
+      if (!values$readyForModelTab) {
+        values$readyForModelTab <- T
+        print("Onto Modeling Tab")
+      }
+    })
+    
+    observeEvent(values$readyForModelTab, {
+      if (!is.null(values$data) && values$readyForModelTab &&
+          !is.null(input$summaryVars)) {
+        
+        print("Finishing Model Tab")
+        
+        sapply(c("rfParams", "mlrParams"), function(id) {
+          updateSelectInput(inputId = id, 
+                            choices = setdiff(colnames(values$dataModel),c("Cover_Type")),
+                            selected = colnames(values$dataModel)[1])
+        })
+        updateSelectInput(session = session, 
+                           "mtrySel", choices = c(1:(ncol(values$dataModel)-1)),
+                          selected = sort(sample(1:(ncol(values$dataModel)-1),
+                                            size = 3)))
+      }
     })
     
     observeEvent(input$addFilterCond, {
@@ -47,16 +96,16 @@ shinyServer(
             idx <- which(colnames(values$data) == input[[paste0("filterSel", 
                                                          toString(i))]])
             if (values$types[idx] == "Quant") {
-              output[[paste0("filterUIPanel", toString(values$conditionIndex))]] <- renderUI({
-                sliderInput(inputId = paste0("filterCond", toString(values$conditionIndex)),
+              output[[paste0("filterUIPanel", toString(i))]] <- renderUI({
+                sliderInput(inputId = paste0("filterCond", toString(i)),
                             label = "Select Range of Values (Slide to Select)",
                             min = min(values$data[,idx]),
                             max = max(values$data[,idx]),
                             value = c(min(values$data[,idx]), max(values$data[,idx])))
               })
             } else if (values$types[idx] == "Qual") {
-              output[[paste0("filterUIPanel", toString(values$conditionIndex))]] <- renderUI({
-                selectInput(inputId = paste0("filterCond", toString(values$conditionIndex)),
+              output[[paste0("filterUIPanel", toString(i))]] <- renderUI({
+                selectInput(inputId = paste0("filterCond", toString(i)),
                             label = "Select Range of Values (Click to Select)",
                             choices = unique(values$data[,idx]),
                             selected = unique(values$data[,idx])[1], 
@@ -144,9 +193,127 @@ shinyServer(
                                   color = input$plot2Grouping
                                 )
                             })
-                          } 
+                          } else {
+                            output$plot2 <- renderPlot({
+                              ggplot(data = temp) + geom_point(
+                                aes(x = x, y = y)) +
+                                theme_classic() + labs(
+                                  x = input$plot2XVar,
+                                  y = input$plot2YVar
+                                )
+                            })
+                          }
+                        } else {
+                          if (input$plot2Group) {
+                            temp <- cbind(temp, 
+                                          data.frame(group = values$dataExplore[,input$plot2Grouping]))
+                            output$plot2 <- renderPlot({
+                              ggplot(data = temp) + geom_bar(
+                                aes(x = x, 
+                                    color = as.factor(group)), 
+                                    stat = "count") +
+                                facet_wrap(~as.factor(y)) +
+                                theme_classic() + labs(
+                                  x = input$plot2XVar,
+                                  y = input$plot2YVar,
+                                  color = input$plot2Grouping
+                                )
+                            })
+                          } else {
+                            output$plot2 <- renderPlot({
+                              ggplot(data = temp) + geom_bar(aes(x = x),
+                                                             stat = "count") +
+                                facet_wrap(~as.factor(y)) +
+                                theme_classic() + labs(
+                                  x = input$plot2XVar,
+                                  y = "Count"
+                                )
+                            })
+                          }
                         }
                       }
                   })
+    
+    observeEvent({input$summaryVars
+                  values$dataExplore}, {
+                    if (!is.null(values$dataExplore) && !is.null(input$summaryVars)) {
+                      temp <- values$dataExplore
+                      for (j in 11:55) {
+                        temp[,j] <- as.factor(temp[,j])
+                      }
+                      output$summary <- renderPrint({
+                        summary(temp[,input$summaryVars])
+                      })
+                    }
+                  })
+    
+    observeEvent({input$trainModels}, {
+      updateActionButton("trainModels", label = "Training, Please Wait...")
+      values$readyForTrain <- T
+    })
+      
+    observeEvent(values$readyForTrain,{
+      if (!values$readyForTrain) {
+        
+      }
+      else if (length(input$rfParams) == 0 || length(input$mlrParams) == 0) {
+        shinyalert(title = "No Parameters Specified for [At Least] One Model",
+                   type = "error", 
+                   text = "Please Specify a Non-Empty List of Parameters for Both Models.")
+      } else if (length(input$rfParams) < max(as.numeric(input$mtrySel))) {
+        shinyalert(title = "Insufficient Number of Candidate Parameters for Random Forest Model",
+                   type = "error",
+                   text = paste0("Please Specify At Least ", toString( max(as.numeric(input$mtrySel))),
+                                 " Parameters for Random Forest Model"))
+      } else if (input$splitProp == 0 || input$splitProp == 1) {
+        shinyalert(title = "Invalid Proportion for Training/Testing Set Split",
+                   type = "error",
+                   text = "Please Specify a Number Between 0 and 1, Exclusive.")
+      } else {
+        print("Creating Partition")
+        idxs <- createDataPartition(1:nrow(values$dataModel),
+                                    p = input$splitProp)[[1]]
+        values$dataModel$Cover_Type <- factor(values$dataModel$Cover_Type,labels=sapply(1:7,function(x){paste0("Cover_Type_",toString(x))}))
+        values$dataModel$Soil_Type <- factor(values$dataModel$Soil_Type)
+        modelTrain <- values$dataModel[idxs,]
+        modelTest  <- values$dataModel[-idxs,]
+        print(paste0("Train Size: ", nrow(modelTrain), " x ", ncol(modelTrain)))
+        set.seed(558)  
+        print("Training GLM")
+        multiLogReg <- multinom(Cover_Type ~ ., 
+                                data = modelTrain %>% select(input$mlrParams, "Cover_Type"),
+                                maxit = 100, trace = T)
+        mlrP <- predict(multiLogReg, newdata = modelTest %>% select(input$mlrParams, "Cover_Type"))
+        # print(mlrP)
+        # print(modelTest$Cover_Type)
+        values$mlr <- multiLogReg
+        
+        output$mlrTable <- renderTable({
+          as.data.frame(confusionMatrix(mlrP,modelTest$Cover_Type)$table) %>%
+            pivot_wider(names_from = "Reference",
+                        values_from = "Freq"
+                        )
+        })
+        
+        print("Training Random Forest")
+        control <- trainControl(method="cv", number=as.numeric(input$kfoldCVSel),
+                                classProbs=TRUE, summaryFunction=mnLogLoss)
+        rfFit <- train(Cover_Type ~ ., # example preds
+                       data = modelTrain %>% select(input$mlrParams, "Cover_Type"),
+                       method = "rf",
+                       metric = "logLoss",
+                       trControl = control,
+                       tuneGrid = expand.grid(mtry = as.numeric(input$mtrySel)))
+        rfPred <- predict(rfFit, newdata = modelTest %>% select(input$mlrParams, "Cover_Type"),
+                          type = "raw")
+        output$rfTable <- renderTable({
+          as.data.frame(confusionMatrix(rfPred, modelTest$Cover_Type)$table) %>%
+            pivot_wider(names_from = "Reference",
+                        values_from = "Freq"
+            )
+        })
+      }
+      
+    })
   }
 )
