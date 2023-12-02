@@ -16,7 +16,10 @@ shinyServer(
                              readyForTrain = F,
                              dataModel = NULL,
                              mlr = NULL,
-                             rf = NULL)
+                             rf = NULL,
+                             mlrParams = NULL,
+                             rfParams = NULL,
+                             readyForPredict = F)
     
    
     
@@ -93,7 +96,7 @@ shinyServer(
       if (!is.null(values$data)) {
         for (i in 1:values$conditionIndex) {
           observeEvent(input[[paste0("filterSel", toString(i))]], {
-            idx <- which(colnames(values$data) == input[[paste0("filterSel", 
+            idx <- which(colnames(values$data) == input[[paste0("filterSel",
                                                          toString(i))]])
             if (values$types[idx] == "Quant") {
               output[[paste0("filterUIPanel", toString(i))]] <- renderUI({
@@ -108,20 +111,20 @@ shinyServer(
                 selectInput(inputId = paste0("filterCond", toString(i)),
                             label = "Select Range of Values (Click to Select)",
                             choices = unique(values$data[,idx]),
-                            selected = unique(values$data[,idx])[1], 
+                            selected = unique(values$data[,idx])[1],
                             multiple = T)
               })
             }
           })
-        } 
+        }
       }
     })
-    
+     
     observeEvent(input$doFilter, {
       if (!is.null(values$data)) {
         temp <- values$data
         for (i in 1:values$conditionIndex) {
-          idx <- which(colnames(values$data) == input[[paste0("filterSel", 
+          idx <- which(colnames(values$data) == input[[paste0("filterSel",
                                                               toString(i))]])
           if (values$types[idx] == "Quant") {
             temp <- temp %>% filter(
@@ -137,7 +140,7 @@ shinyServer(
         values$dataExplore <- temp
       }
     })
-    
+    # 
     observeEvent({input$plot1Vars
                   input$plot1Type
                   values$dataExplore}, {
@@ -145,8 +148,8 @@ shinyServer(
                       temp <- data.frame(y = values$dataExplore[,input$plot1Vars])
                       if (input$plot1Type == "Histogram") {
                         output$plot1 <- renderPlot({
-                          ggplot(data = temp) + 
-                            geom_histogram(aes(x = y),bins = input$numHistBins) + 
+                          ggplot(data = temp) +
+                            geom_histogram(aes(x = y),bins = input$numHistBins) +
                             labs(
                               x = input$plot1Vars,
                               y = "Count"
@@ -154,7 +157,7 @@ shinyServer(
                         })
                       } else {
                         output$plot1 <- renderPlot({
-                          ggplot(data = temp) + 
+                          ggplot(data = temp) +
                             geom_boxplot(aes(y = y)) + labs(
                               y = input$plot1Vars
                             ) + theme_classic() +
@@ -162,10 +165,10 @@ shinyServer(
                                   axis.text.x=element_blank(),
                                   axis.ticks.x=element_blank())
                         })
-                      } 
+                      }
                     }
                   })
-    
+    # 
     observeEvent({input$plot2XVar
                   input$plot2YVar
                   input$plot2Grouping
@@ -174,7 +177,7 @@ shinyServer(
                   values$dataExplore}, {
                     if (!is.null(values$dataExplore) &&
                         input$plot2XVar != "" &&
-                        input$plot2YVar != "" 
+                        input$plot2YVar != ""
                         ) {
                       temp <- data.frame(
                         x = values$dataExplore[,input$plot2XVar],
@@ -182,7 +185,7 @@ shinyServer(
                       )
                         if (input$plot2Type == "Scatterplot") {
                           if (input$plot2Group) {
-                            temp <- cbind(temp, 
+                            temp <- cbind(temp,
                                           data.frame(group = values$dataExplore[,input$plot2Grouping]))
                             output$plot2 <- renderPlot({
                               ggplot(data = temp) + geom_point(
@@ -205,12 +208,12 @@ shinyServer(
                           }
                         } else {
                           if (input$plot2Group) {
-                            temp <- cbind(temp, 
+                            temp <- cbind(temp,
                                           data.frame(group = values$dataExplore[,input$plot2Grouping]))
                             output$plot2 <- renderPlot({
                               ggplot(data = temp) + geom_bar(
-                                aes(x = x, 
-                                    color = as.factor(group)), 
+                                aes(x = x,
+                                    color = as.factor(group)),
                                     stat = "count") +
                                 facet_wrap(~as.factor(y)) +
                                 theme_classic() + labs(
@@ -233,32 +236,23 @@ shinyServer(
                         }
                       }
                   })
-    
+
     observeEvent({input$summaryVars
                   values$dataExplore}, {
                     if (!is.null(values$dataExplore) && !is.null(input$summaryVars)) {
                       temp <- values$dataExplore
-                      for (j in 11:55) {
-                        temp[,j] <- as.factor(temp[,j])
-                      }
                       output$summary <- renderPrint({
                         summary(temp[,input$summaryVars])
                       })
                     }
                   })
-    
-    observeEvent({input$trainModels}, {
-      updateActionButton("trainModels", label = "Training, Please Wait...")
-      values$readyForTrain <- T
-    })
-      
-    observeEvent(values$readyForTrain,{
-      if (!values$readyForTrain) {
-        
-      }
-      else if (length(input$rfParams) == 0 || length(input$mlrParams) == 0) {
+
+
+    observeEvent(input$trainModels, {
+
+      if (length(input$rfParams) == 0 || length(input$mlrParams) == 0) {
         shinyalert(title = "No Parameters Specified for [At Least] One Model",
-                   type = "error", 
+                   type = "error",
                    text = "Please Specify a Non-Empty List of Parameters for Both Models.")
       } else if (length(input$rfParams) < max(as.numeric(input$mtrySel))) {
         shinyalert(title = "Insufficient Number of Candidate Parameters for Random Forest Model",
@@ -270,50 +264,188 @@ shinyServer(
                    type = "error",
                    text = "Please Specify a Number Between 0 and 1, Exclusive.")
       } else {
+
         print("Creating Partition")
         idxs <- createDataPartition(1:nrow(values$dataModel),
                                     p = input$splitProp)[[1]]
+        # If using the mini dataset, no need for this line (done in preprocess)
         values$dataModel$Cover_Type <- factor(values$dataModel$Cover_Type,labels=sapply(1:7,function(x){paste0("Cover_Type_",toString(x))}))
-        values$dataModel$Soil_Type <- factor(values$dataModel$Soil_Type)
         modelTrain <- values$dataModel[idxs,]
         modelTest  <- values$dataModel[-idxs,]
         print(paste0("Train Size: ", nrow(modelTrain), " x ", ncol(modelTrain)))
-        set.seed(558)  
+        set.seed(558)
         print("Training GLM")
-        multiLogReg <- multinom(Cover_Type ~ ., 
+        multiLogReg <- multinom(Cover_Type ~ .,
                                 data = modelTrain %>% select(input$mlrParams, "Cover_Type"),
                                 maxit = 100, trace = T)
         mlrP <- predict(multiLogReg, newdata = modelTest %>% select(input$mlrParams, "Cover_Type"))
+        mlrPTrain <- predict(multiLogReg, newdata = modelTrain %>% select(input$mlrParams, "Cover_Type"))
         # print(mlrP)
         # print(modelTest$Cover_Type)
         values$mlr <- multiLogReg
-        
-        output$mlrTable <- renderTable({
-          as.data.frame(confusionMatrix(mlrP,modelTest$Cover_Type)$table) %>%
-            pivot_wider(names_from = "Reference",
-                        values_from = "Freq"
-                        )
+        values$mlrParams <- input$mlrParams
+
+        output$mlrTrainTable <- renderPrint({
+          confusionMatrix(mlrPTrain,modelTrain$Cover_Type)
         })
-        
+        output$mlrTable <- renderPrint({
+          confusionMatrix(mlrP,modelTest$Cover_Type)
+        })
+
+        output$mlrSummaryText <- renderPrint({summary(values$mlr)})
+
         print("Training Random Forest")
+        print(as.vector(as.numeric(input$mtrySel)))
         control <- trainControl(method="cv", number=as.numeric(input$kfoldCVSel),
                                 classProbs=TRUE, summaryFunction=mnLogLoss)
+        print(head(modelTrain %>% select(input$rfParams, "Cover_Type")))
         rfFit <- train(Cover_Type ~ ., # example preds
-                       data = modelTrain %>% select(input$mlrParams, "Cover_Type"),
+                       data = modelTrain %>% select(input$rfParams, "Cover_Type"),
                        method = "rf",
                        metric = "logLoss",
                        trControl = control,
-                       tuneGrid = expand.grid(mtry = as.numeric(input$mtrySel)))
-        rfPred <- predict(rfFit, newdata = modelTest %>% select(input$mlrParams, "Cover_Type"),
+                       tuneGrid = expand.grid(mtry = as.vector(as.numeric(input$mtrySel))))
+        rfPred <- predict(rfFit, newdata = modelTest %>% select(input$rfParams, "Cover_Type"),
                           type = "raw")
-        output$rfTable <- renderTable({
-          as.data.frame(confusionMatrix(rfPred, modelTest$Cover_Type)$table) %>%
-            pivot_wider(names_from = "Reference",
-                        values_from = "Freq"
-            )
+        rfPredTrain <- predict(rfFit, newdata = modelTrain %>% select(input$rfParams, "Cover_Type"),
+                          type = "raw")
+
+        values$rf <- rfFit
+        values$rfParams <- input$rfParams
+        
+        output$rfTrainTable <- renderPrint({
+          confusionMatrix(rfPredTrain,modelTrain$Cover_Type)
+        })
+        output$rfTable <- renderPrint({
+          confusionMatrix(rfPred,modelTest$Cover_Type)
+        })
+
+        varImpRF <- varImp(rfFit)
+        output$varImpRF <- renderPlot({plot(varImpRF)})
+
+        isolate({
+          output$mlrSummary <- insertUI(selector = "#mlrSummary",
+                                        ui = verbatimTextOutput("mlrSummaryText"))
+
+          output$rfSummary <- insertUI(selector = "#rfSummary",
+                                       ui = plotOutput("varImpRF"))
         })
       }
-      
     })
+    
+    observe({
+                    if (!is.null(values$rf) && !is.null(values$mlr)) {
+          
+                      
+                      output$dynamicPredictors <- insertUI(
+                        selector = "#dynamicPredictors",
+                        where = "beforeEnd",
+                        ui = fluidRow(
+                          h4("Specify Values for Multinomial Logistic Regression Predictors:")
+                        )
+                      )
+                      sapply(1:length(values$mlrParams), function(p) {
+                        if (is.numeric(values$dataModel[,values$mlrParams[p]])) {
+                          output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
+                                                               where = "beforeEnd",
+                                                               ui = fluidRow(
+                                                                 numericInput(inputId = paste0("mlrPred", toString(p)),
+                                                                              label = paste0("Value for ", values$mlrParams[p]),
+                                                                              min = min(values$dataModel[,p]),
+                                                                              max = max(values$dataModel[,p]),
+                                                                              value = min(values$dataModel[,p]))
+                                                               ))
+                        } else {
+                          output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
+                                                               where = "beforeEnd",
+                                                               ui = fluidRow(
+                                                                 selectInput(paste0("mlrPred", toString(p)),
+                                                                             label = paste0("Value for ", p),
+                                                                             choices = unique(values$dataModel[,p]),
+                                                                             selected = unique(values$dataModel[,p])[1])
+                                                               ))
+                        }
+                      })
+                      
+                      output$dynamicPredictors <- insertUI(
+                        selector = "#dynamicPredictors",
+                        where = "beforeEnd",
+                        ui = fluidRow(
+                          hr(),
+                          h4("Specify Values for Random Forest Predictors:")
+                        )
+                      )
+                      sapply(1:length(values$rfParams), function(p) {
+                        if (is.numeric(values$dataModel[,values$rfParams[p]])) {
+                          output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
+                                                               where = "beforeEnd",
+                                                               ui = fluidRow(
+                                                                 numericInput(inputId = paste0("rfPred", toString(p)),
+                                                                              label = paste0("Value for ", values$rfParams[p]),
+                                                                              min = min(values$dataModel[,values$rfParams[p]]),
+                                                                              max = max(values$dataModel[,values$rfParams[p]]),
+                                                                              value = min(values$dataModel[,values$rfParams[p]]))))
+                                                               
+                        } else {
+                          output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
+                                                               where = "beforeEnd",
+                                                               ui = fluidRow(
+                                                                 selectInput(paste0("rfPred", toString(p)),
+                                                                             label = paste0("Value for ", values$rfParams[p]),
+                                                                             choices = unique(values$dataModel[,values$rfParams[p]]),
+                                                                             selected = unique(values$dataModel[,values$rfParams[p]])[1])
+                                                               ))
+                        }
+                      })
+                      
+                      output$dynamicPredictors <- insertUI(
+                        selector = "#dynamicPredictors",
+                        where = "beforeEnd",
+                        ui = fluidRow(
+                          hr(),
+                          actionButton("doPred", label = "Predict")
+                        )
+                      )
+                      
+                      values$readyForPredict <- T
+  
+                    } 
+                  })
+    
+    observeEvent({input$doPred}, {
+                    if (!is.null(values$rf) && !is.null(values$mlr)) {
+                      
+                      mlrNewObs <- as.data.frame(lapply(1:length(values$mlrParams), function(p) {
+                        if (is.numeric(values$dataModel[,values$mlrParams[p]])) {
+                          return(as.numeric(input[[paste0("mlrPred", toString(p))]]))
+                        } else {
+                          return(as.character(input[[paste0("mlrPred", toString(p))]]))
+                        }
+                      }))
+                      names(mlrNewObs) <- values$mlrParams
+                      
+                      rfNewObs <- as.data.frame(lapply(1:length(values$rfParams), function(p) {
+                        print(values$rfParams[[p]])
+                        print(values$dataModel[,values$rfParams[p]])
+                        if (is.numeric(values$dataModel[,values$rfParams[p]])) {
+                          return(as.numeric(input[[paste0("rfPred", toString(p))]]))
+                        } else {
+                          return(as.character(input[[paste0("rfPred", toString(p))]]))
+                        }
+                      }))
+                      names(rfNewObs) <- values$rfParams
+                      
+                      output$mlrPredResults <- renderPrint({predict(values$mlr, newdata = mlrNewObs)})
+                      output$rfPredResults <- renderPrint({predict(values$rf, newdata = rfNewObs, type = "raw")})
+                      
+                      output$predResults <- renderUI({fluidRow(
+                                                       h4("Multinomial Logistic Regression Results"),
+                                                       verbatimTextOutput("mlrPredResults"),
+                                                       hr(),
+                                                       h4("Random Forest Results"),
+                                                       verbatimTextOutput("rfPredResults")
+                                                     )})
+                    }
+                  })
   }
 )

@@ -1,8 +1,10 @@
 library(shinythemes)
 library(shinyWidgets)
+library(shinyjs)
 
 shinyUI(
   navbarPage(
+    useShinyjs(),
     setBackgroundImage(src = "roosevelt4.jpg"),
     title = "Forest Soil Cover Types",
     theme = shinytheme("simplex"),
@@ -121,7 +123,7 @@ shinyUI(
           h4("Select Variables to Summarize"),
           selectInput("summaryVars", label = "Select Variable(s)", 
                       choices = NULL, multiple = T),
-          style = "overflow-y:scroll; height:600px;"
+          style = "overflow-y:scroll; height:80%;"
         ),
         mainPanel(
           fluidRow(
@@ -129,7 +131,7 @@ shinyUI(
                    panel(
                      heading = "Plot #1",
                      addSpinner(plotOutput("plot1",height = "275px")),
-                     style = "height:300px;"
+                     style = "height:80%;"
                    )
             ),
             column(width = 6,
@@ -194,35 +196,46 @@ shinyUI(
                        column(width = 6,
                               panel(
                                 heading = "Random Forest Model",
+                                h5("Model Fit Summary"),
+                                div(id = "rfSummary"),
+                                h5("Train Fit Results"),
+                                verbatimTextOutput("rfTrainTable"),
+                                h5("Test Fit Results"), 
                                 h6("Note: Column headings are reference values!"),
-                                  tableOutput("rfTable"),
+                                verbatimTextOutput("rfTable"),
                                 style = "overflow-x:scroll;
-                                         overflow-y:scroll; 
-                                         height:250px;"
+                                         overflow-y:scroll;"
                               )
                        ),
                        column(width = 6,
                               panel(
                                 heading = "Logistic Regression Model",
+                                h5("Model Fit Summary"),
+                                div(id = "mlrSummary"),
+                                h5("Train Fit Results"),
+                                verbatimTextOutput("mlrTrainTable"),
+                                h5("Test Fit Results"), 
                                 h6("Note: Column headings are reference values!"),
-                                tableOutput("mlrTable"),
+                                verbatimTextOutput("mlrTable"),
                                 style = "overflow-x:scroll;
-                                         overflow-y:scroll; 
-                                         height:250px;"
+                                         overflow-y:scroll;"
                               )
                        ),
                        
-                     ),
-                     fluidRow(
-                       column(width = 12,
-                         panel(heading = "Training Results",
-                               uiOutput("trainResults"))
-                       )
                      )
                    )
                  ),
                  style = "background-color: #FFFFFF !important"),
-        tabPanel(title = "Prediction",style = "background-color: #FFFFFF !important")
+        tabPanel(title = "Prediction",
+                 sidebarLayout(
+                   sidebarPanel(
+                     div(id = "dynamicPredictors")
+                   ),
+                   mainPanel(
+                     uiOutput("predResults")
+                   )
+                 ),
+                 style = "background-color: #FFFFFF !important")
       )
     ),
     footer = tags$footer(
