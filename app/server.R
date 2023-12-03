@@ -9,6 +9,8 @@ library(tidyr)
 
 shinyServer(
   function(input, output, session) {
+    
+    ### Reactive Values used throughout the app
     values <- reactiveValues(data = NULL, conditionIndex = 0,
                              types = c(rep("Quant", 10), rep("Qual", 45)),
                              dataExplore = NULL,
@@ -38,8 +40,8 @@ shinyServer(
         # ), c(sapply(1:40, function(j) {paste0("Soil_Type_",toString(j))}), 
         #      "Cover_Type"))
         values$data <- data
-        values$dataModel <- dataModel
-        values$dataExplore <- values$data
+        values$dataModel <- dataModel     # Still currently the 600K x ...
+        values$dataExplore <- values$data 
         
         print("Update Cols")
         updateActionButton(inputId = "addFilterCond", label = "Click!")
@@ -51,6 +53,7 @@ shinyServer(
       } 
     })
     
+    # This checks if the above observer is finished!
     observeEvent({input$summaryVars}, {
       if (!values$readyForModelTab) {
         values$readyForModelTab <- T
@@ -58,6 +61,7 @@ shinyServer(
       }
     })
     
+    # This supplies predictors that can be selected for the model
     observeEvent(values$readyForModelTab, {
       if (!is.null(values$data) && values$readyForModelTab &&
           !is.null(input$summaryVars)) {
@@ -76,6 +80,8 @@ shinyServer(
       }
     })
     
+    ### Dynamic UI creation for additional conditions on which to filter
+    ### in the Exploration tab only!
     observeEvent(input$addFilterCond, {
       if (!is.null(values$data)) {
         values$conditionIndex <- values$conditionIndex + 1
@@ -140,7 +146,8 @@ shinyServer(
         values$dataExplore <- temp
       }
     })
-    # 
+    
+    # These observers control visualizations in the Data Exploration 
     observeEvent({input$plot1Vars
                   input$plot1Type
                   values$dataExplore}, {
@@ -253,7 +260,7 @@ shinyServer(
                     }
                   })
 
-
+    # This observer executes code to train BOTH models.
     observeEvent(input$trainModels, {
 
       if (length(input$rfParams) == 0 || length(input$mlrParams) == 0) {
@@ -349,6 +356,8 @@ shinyServer(
       }
     })
     
+    # This code checks if a model has been created, and then populates
+    # UI for predictions!
     observe({
       if (!is.null(values$rf) && !is.null(values$mlr)) {
 
@@ -427,6 +436,7 @@ shinyServer(
         } 
     })
     
+    # This obsever performs the predictions!
     observeEvent({input$doPred}, {
                     if (!is.null(values$rf) && !is.null(values$mlr)) {
                       

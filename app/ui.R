@@ -3,9 +3,15 @@ library(shinyWidgets)
 
 shinyUI(
   navbarPage(
+    
+    ### Global UI Configuration
     setBackgroundImage(src = "roosevelt4.jpg"),
     title = "Forest Soil Cover Types",
     theme = shinytheme("simplex"),
+    #############################
+    
+    
+    ### About Tab
     tabPanel(
       title = "About",
       fluidRow(
@@ -66,6 +72,8 @@ shinyUI(
         style = "margin-left:10px;"
       )
     ),
+    
+    ### Data Exploration Tab
     tabPanel(
       title = "Data Exploration",
       sidebarLayout(
@@ -126,6 +134,8 @@ shinyUI(
                       selected = c("Independent Summary of Each")),
           style = "overflow-y:scroll; height:80%;"
         ),
+        
+        ### Data Exploration Visualizations
         mainPanel(
           fluidRow(
             column(width = 6,
@@ -151,6 +161,8 @@ shinyUI(
         )
       )
     ),
+    
+    ### Modeling Tab
     tabPanel(
       title = "Modeling",
       tags$style(HTML("
@@ -160,6 +172,8 @@ shinyUI(
         .tabbable > .nav > li[class=active]    > a {background-color: white; color:orange}
       ")),
       tabsetPanel(
+        
+        ### MathJAX Stuff!
         tabPanel(title = "Modeling Info", 
                  
                  h3("What is Multinomial Logistic Regression?"),
@@ -241,6 +255,8 @@ shinyUI(
           )
         ),
                  style = "background-color: #FFFFFF !important"),
+        
+        ### Model Fitting Tab
         tabPanel(title = "Model Fitting",
                  sidebarLayout(
                    sidebarPanel(
@@ -307,6 +323,8 @@ shinyUI(
                    )
                  ),
                  style = "background-color: #FFFFFF !important"),
+        
+        ### Prediction Tab
         tabPanel(title = "Prediction",
                  sidebarLayout(
                    sidebarPanel(
