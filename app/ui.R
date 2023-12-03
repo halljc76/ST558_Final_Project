@@ -121,6 +121,9 @@ shinyUI(
           h4("Select Variables to Summarize"),
           selectInput("summaryVars", label = "Select Variable(s)", 
                       choices = NULL, multiple = T),
+          selectInput("summaryType", label = "Type of Summary Between Columns",
+                      choices = c("Independent Summary of Each", "Contingency Table"),
+                      selected = c("Independent Summary of Each")),
           style = "overflow-y:scroll; height:80%;"
         ),
         mainPanel(

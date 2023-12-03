@@ -238,12 +238,18 @@ shinyServer(
                   })
 
     observeEvent({input$summaryVars
+                  input$summaryType
                   values$dataExplore}, {
                     if (!is.null(values$dataExplore) && !is.null(input$summaryVars)) {
-                      temp <- values$dataExplore
-                      output$summary <- renderPrint({
-                        summary(temp[,input$summaryVars])
-                      })
+                      if (input$summaryType == "Contingency Table") {
+                        output$summary <- renderPrint({
+                          table(values$dataExplore[,input$summaryVars])
+                        })
+                      } else {
+                        output$summary <- renderPrint({
+                          summary(values$dataExplore[,input$summaryVars])
+                        }) 
+                      }
                     }
                   })
 
