@@ -264,153 +264,162 @@ shinyServer(
                    type = "error",
                    text = "Please Specify a Number Between 0 and 1, Exclusive.")
       } else {
-
-        print("Creating Partition")
-        idxs <- createDataPartition(1:nrow(values$dataModel),
-                                    p = input$splitProp)[[1]]
-        # If using the mini dataset, no need for this line (done in preprocess)
-        values$dataModel$Cover_Type <- factor(values$dataModel$Cover_Type,labels=sapply(1:7,function(x){paste0("Cover_Type_",toString(x))}))
-        modelTrain <- values$dataModel[idxs,]
-        modelTest  <- values$dataModel[-idxs,]
-        print(paste0("Train Size: ", nrow(modelTrain), " x ", ncol(modelTrain)))
-        set.seed(558)
-        print("Training GLM")
-        multiLogReg <- multinom(Cover_Type ~ .,
-                                data = modelTrain %>% select(input$mlrParams, "Cover_Type"),
-                                maxit = 100, trace = T)
-        mlrP <- predict(multiLogReg, newdata = modelTest %>% select(input$mlrParams, "Cover_Type"))
-        mlrPTrain <- predict(multiLogReg, newdata = modelTrain %>% select(input$mlrParams, "Cover_Type"))
-        # print(mlrP)
-        # print(modelTest$Cover_Type)
-        values$mlr <- multiLogReg
-        values$mlrParams <- input$mlrParams
-
-        output$mlrTrainTable <- renderPrint({
-          confusionMatrix(mlrPTrain,modelTrain$Cover_Type)
-        })
-        output$mlrTable <- renderPrint({
-          confusionMatrix(mlrP,modelTest$Cover_Type)
-        })
-
-        output$mlrSummaryText <- renderPrint({summary(values$mlr)})
-
-        print("Training Random Forest")
-        print(as.vector(as.numeric(input$mtrySel)))
-        control <- trainControl(method="cv", number=as.numeric(input$kfoldCVSel),
-                                classProbs=TRUE, summaryFunction=mnLogLoss)
-        print(head(modelTrain %>% select(input$rfParams, "Cover_Type")))
-        rfFit <- train(Cover_Type ~ ., # example preds
-                       data = modelTrain %>% select(input$rfParams, "Cover_Type"),
-                       method = "rf",
-                       metric = "logLoss",
-                       trControl = control,
-                       tuneGrid = expand.grid(mtry = as.vector(as.numeric(input$mtrySel))))
-        rfPred <- predict(rfFit, newdata = modelTest %>% select(input$rfParams, "Cover_Type"),
-                          type = "raw")
-        rfPredTrain <- predict(rfFit, newdata = modelTrain %>% select(input$rfParams, "Cover_Type"),
-                          type = "raw")
-
-        values$rf <- rfFit
-        values$rfParams <- input$rfParams
-        
-        output$rfTrainTable <- renderPrint({
-          confusionMatrix(rfPredTrain,modelTrain$Cover_Type)
-        })
-        output$rfTable <- renderPrint({
-          confusionMatrix(rfPred,modelTest$Cover_Type)
-        })
-
-        varImpRF <- varImp(rfFit)
-        output$varImpRF <- renderPlot({plot(varImpRF)})
-
-        isolate({
-          output$mlrSummary <- insertUI(selector = "#mlrSummary",
-                                        ui = verbatimTextOutput("mlrSummaryText"))
-
-          output$rfSummary <- insertUI(selector = "#rfSummary",
-                                       ui = plotOutput("varImpRF"))
-        })
+        withProgress(
+          message = "Training models (this could take a while...)",
+          expr = {
+            print("Creating Partition")
+            idxs <- createDataPartition(1:nrow(values$dataModel),
+                                        p = input$splitProp)[[1]]
+            # If using the mini dataset, no need for this line (done in preprocess)
+            values$dataModel$Cover_Type <- factor(values$dataModel$Cover_Type,labels=sapply(1:7,function(x){paste0("Cover_Type_",toString(x))}))
+            modelTrain <- values$dataModel[idxs,]
+            modelTest  <- values$dataModel[-idxs,]
+            incProgress(amount = 0.1, message = "Partitioned data! Now training GLM...")
+            
+            set.seed(558)
+            print("Training GLM")
+            multiLogReg <- multinom(Cover_Type ~ .,
+                                    data = modelTrain %>% select(input$mlrParams, "Cover_Type"),
+                                    maxit = 100, trace = T)
+            mlrP <- predict(multiLogReg, newdata = modelTest %>% select(input$mlrParams, "Cover_Type"))
+            mlrPTrain <- predict(multiLogReg, newdata = modelTrain %>% select(input$mlrParams, "Cover_Type"))
+            # print(mlrP)
+            # print(modelTest$Cover_Type)
+            values$mlr <- multiLogReg
+            values$mlrParams <- input$mlrParams
+            
+            output$mlrTrainTable <- renderPrint({
+              confusionMatrix(mlrPTrain,modelTrain$Cover_Type)
+            })
+            output$mlrTable <- renderPrint({
+              confusionMatrix(mlrP,modelTest$Cover_Type)
+            })
+            
+            output$mlrSummaryText <- renderPrint({summary(values$mlr)})
+            incProgress(amount = 0.2, message = "GLM Finished! Now training random forest...")
+            
+            print("Training Random Forest")
+            print(as.vector(as.numeric(input$mtrySel)))
+            control <- trainControl(method="cv", number=as.numeric(input$kfoldCVSel),
+                                    classProbs=TRUE, summaryFunction=mnLogLoss)
+            print(head(modelTrain %>% select(input$rfParams, "Cover_Type")))
+            rfFit <- train(Cover_Type ~ ., # example preds
+                           data = modelTrain %>% select(input$rfParams, "Cover_Type"),
+                           method = "rf",
+                           metric = "logLoss",
+                           trControl = control,
+                           tuneGrid = expand.grid(mtry = as.vector(as.numeric(input$mtrySel))))
+            rfPred <- predict(rfFit, newdata = modelTest %>% select(input$rfParams, "Cover_Type"),
+                              type = "raw")
+            rfPredTrain <- predict(rfFit, newdata = modelTrain %>% select(input$rfParams, "Cover_Type"),
+                                   type = "raw")
+            
+            values$rf <- rfFit
+            values$rfParams <- input$rfParams
+            
+            incProgress(amount = 0.3, message = "Random Forest finished! Computing results...")
+            
+            output$rfTrainTable <- renderPrint({
+              confusionMatrix(rfPredTrain,modelTrain$Cover_Type)
+            })
+            output$rfTable <- renderPrint({
+              confusionMatrix(rfPred,modelTest$Cover_Type)
+            })
+            
+            varImpRF <- varImp(rfFit)
+            output$varImpRF <- renderPlot({plot(varImpRF)})
+            
+            isolate({
+              output$mlrSummary <- insertUI(selector = "#mlrSummary",
+                                            ui = verbatimTextOutput("mlrSummaryText"))
+              
+              output$rfSummary <- insertUI(selector = "#rfSummary",
+                                           ui = plotOutput("varImpRF"))
+            })
+            
+            incProgress(amount = 0.4, message = "Done!")
+          }
+        )
       }
     })
     
     observe({
-                    if (!is.null(values$rf) && !is.null(values$mlr)) {
+      if (!is.null(values$rf) && !is.null(values$mlr)) {
+
+          output$dynamicPredictors <- insertUI(
+            selector = "#dynamicPredictors",
+            where = "beforeEnd",
+            ui = fluidRow(
+              h4("Specify Values for Multinomial Logistic Regression Predictors:")
+            )
+          )
+          sapply(1:length(values$mlrParams), function(p) {
+            if (is.numeric(values$dataModel[,values$mlrParams[p]])) {
+              output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
+                                                   where = "beforeEnd",
+                                                   ui = fluidRow(
+                                                     numericInput(inputId = paste0("mlrPred", toString(p)),
+                                                                  label = paste0("Value for ", values$mlrParams[p]),
+                                                                  min = min(values$dataModel[,p]),
+                                                                  max = max(values$dataModel[,p]),
+                                                                  value = min(values$dataModel[,p]))
+                                                   ))
+            } else {
+              output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
+                                                   where = "beforeEnd",
+                                                   ui = fluidRow(
+                                                     selectInput(paste0("mlrPred", toString(p)),
+                                                                 label = paste0("Value for ", p),
+                                                                 choices = unique(values$dataModel[,p]),
+                                                                 selected = unique(values$dataModel[,p])[1])
+                                                   ))
+            }
+          })
           
-                      
-                      output$dynamicPredictors <- insertUI(
-                        selector = "#dynamicPredictors",
-                        where = "beforeEnd",
-                        ui = fluidRow(
-                          h4("Specify Values for Multinomial Logistic Regression Predictors:")
-                        )
-                      )
-                      sapply(1:length(values$mlrParams), function(p) {
-                        if (is.numeric(values$dataModel[,values$mlrParams[p]])) {
-                          output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
-                                                               where = "beforeEnd",
-                                                               ui = fluidRow(
-                                                                 numericInput(inputId = paste0("mlrPred", toString(p)),
-                                                                              label = paste0("Value for ", values$mlrParams[p]),
-                                                                              min = min(values$dataModel[,p]),
-                                                                              max = max(values$dataModel[,p]),
-                                                                              value = min(values$dataModel[,p]))
-                                                               ))
-                        } else {
-                          output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
-                                                               where = "beforeEnd",
-                                                               ui = fluidRow(
-                                                                 selectInput(paste0("mlrPred", toString(p)),
-                                                                             label = paste0("Value for ", p),
-                                                                             choices = unique(values$dataModel[,p]),
-                                                                             selected = unique(values$dataModel[,p])[1])
-                                                               ))
-                        }
-                      })
-                      
-                      output$dynamicPredictors <- insertUI(
-                        selector = "#dynamicPredictors",
-                        where = "beforeEnd",
-                        ui = fluidRow(
-                          hr(),
-                          h4("Specify Values for Random Forest Predictors:")
-                        )
-                      )
-                      sapply(1:length(values$rfParams), function(p) {
-                        if (is.numeric(values$dataModel[,values$rfParams[p]])) {
-                          output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
-                                                               where = "beforeEnd",
-                                                               ui = fluidRow(
-                                                                 numericInput(inputId = paste0("rfPred", toString(p)),
-                                                                              label = paste0("Value for ", values$rfParams[p]),
-                                                                              min = min(values$dataModel[,values$rfParams[p]]),
-                                                                              max = max(values$dataModel[,values$rfParams[p]]),
-                                                                              value = min(values$dataModel[,values$rfParams[p]]))))
-                                                               
-                        } else {
-                          output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
-                                                               where = "beforeEnd",
-                                                               ui = fluidRow(
-                                                                 selectInput(paste0("rfPred", toString(p)),
-                                                                             label = paste0("Value for ", values$rfParams[p]),
-                                                                             choices = unique(values$dataModel[,values$rfParams[p]]),
-                                                                             selected = unique(values$dataModel[,values$rfParams[p]])[1])
-                                                               ))
-                        }
-                      })
-                      
-                      output$dynamicPredictors <- insertUI(
-                        selector = "#dynamicPredictors",
-                        where = "beforeEnd",
-                        ui = fluidRow(
-                          hr(),
-                          actionButton("doPred", label = "Predict")
-                        )
-                      )
-                      
-                      values$readyForPredict <- T
-  
-                    } 
-                  })
+          output$dynamicPredictors <- insertUI(
+            selector = "#dynamicPredictors",
+            where = "beforeEnd",
+            ui = fluidRow(
+              hr(),
+              h4("Specify Values for Random Forest Predictors:")
+            )
+          )
+          sapply(1:length(values$rfParams), function(p) {
+            if (is.numeric(values$dataModel[,values$rfParams[p]])) {
+              output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
+                                                   where = "beforeEnd",
+                                                   ui = fluidRow(
+                                                     numericInput(inputId = paste0("rfPred", toString(p)),
+                                                                  label = paste0("Value for ", values$rfParams[p]),
+                                                                  min = min(values$dataModel[,values$rfParams[p]]),
+                                                                  max = max(values$dataModel[,values$rfParams[p]]),
+                                                                  value = min(values$dataModel[,values$rfParams[p]]))))
+                                                   
+            } else {
+              output$dynamicPredictors <- insertUI(selector = "#dynamicPredictors",
+                                                   where = "beforeEnd",
+                                                   ui = fluidRow(
+                                                     selectInput(paste0("rfPred", toString(p)),
+                                                                 label = paste0("Value for ", values$rfParams[p]),
+                                                                 choices = unique(values$dataModel[,values$rfParams[p]]),
+                                                                 selected = unique(values$dataModel[,values$rfParams[p]])[1])
+                                                   ))
+            }
+          })
+          
+          output$dynamicPredictors <- insertUI(
+            selector = "#dynamicPredictors",
+            where = "beforeEnd",
+            ui = fluidRow(
+              hr(),
+              actionButton("doPred", label = "Predict")
+            )
+          )
+          
+          values$readyForPredict <- T
+
+        } 
+    })
     
     observeEvent({input$doPred}, {
                     if (!is.null(values$rf) && !is.null(values$mlr)) {

@@ -43,3 +43,5 @@ rm(temp)
 rm(CT_prob)
 rm(idxsForApp)
 rm(props)
+
+# Save the data in the Environment tab
