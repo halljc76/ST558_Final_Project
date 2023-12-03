@@ -13,7 +13,7 @@ and predictive medium, investigating univariate and bivariate relationships in
 an effort to identify, and then train models on, predictors they believe could
 be significant in achieving correct classifications of soil cover types.
 
-More information regarding the background of the dataset can be found [here](./app/data/covtype_info).
+More information regarding the background of the dataset can be found in the first tab of the application.
 (This will download the original data dictionary.)
 
 ## Packages Needed for the Application
