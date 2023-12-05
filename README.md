@@ -1,9 +1,15 @@
 # ST 558 Final Project: Classifying Forest Cover Types
 
+## Note to the Instructor(s)
+
+Stratified sampling was used to reduce the dataset used for modeling down to 150K
+rows from the original 581K -- the random forest still takes a considerable time to 
+train!
+
 ## Purpose of Application
 
 This application is the final project of the Fall 2023 course ST 558: Data 
-Science for Statisticians at North Carolina State Univeristy. It houses
+Science for Statisticians at North Carolina State University. It houses
 an exploration into a dataset involving soil cover types in forests through
 both an interactive and predictive medium, allowing users the ability to 
 fit, test, and evaluate appropriate statistical models.
