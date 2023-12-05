@@ -11,7 +11,7 @@ colnames(data) <- append(c(
 ), c(sapply(1:40, function(j) {paste0("Soil_Type_",toString(j))}), "Cover_Type"))
 props <- table(data$Cover_Type) / nrow(data)
 CT_prob <- sapply(1:nrow(data), function(x) {props[data$Cover_Type[x]]})
-idxsForApp <- sample(1:nrow(data),size = 25000,replace = F,prob = CT_prob)
+idxsForApp <- sample(1:nrow(data),size = 150000,replace = F,prob = CT_prob)
 
 dataModel <- data %>% mutate(
   Soil_Type = as.factor(sapply(1:nrow(data), function(x) {
@@ -36,7 +36,6 @@ temp <- temp %>% mutate(
     names(which.max(temp[x,] %>% select(Wilderness_Rawah:Wilderness_Cache)))}))
 )
 temp <- temp %>% select(-c(Wilderness_Rawah:Wilderness_Cache))
-temp <- temp %>% select(-CT_prob)
 
 dataModel <- temp
 rm(temp)

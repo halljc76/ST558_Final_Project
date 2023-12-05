@@ -28,7 +28,7 @@ shinyServer(
     observe({
       if (is.null(values$data)) {
         print("Read in Data")
-        load("./data/preprocessed.RData")
+        load("./data/preprocessed_final.RData")
         # values$data <- read.table(gzfile("data/covtype.data.gz"),header = F,sep = ",")
         # colnames(values$data) <- append(c(
         #   "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
@@ -40,7 +40,7 @@ shinyServer(
         # ), c(sapply(1:40, function(j) {paste0("Soil_Type_",toString(j))}), 
         #      "Cover_Type"))
         values$data <- data
-        values$dataModel <- dataModel     # Still currently the 600K x ...
+        values$dataModel <- dataModel     # Updated to be 25K x ...
         values$dataExplore <- values$data 
         
         print("Update Cols")
@@ -285,6 +285,8 @@ shinyServer(
                                         p = input$splitProp)[[1]]
             # If using the mini dataset, no need for this line (done in preprocess)
             values$dataModel$Cover_Type <- factor(values$dataModel$Cover_Type,labels=sapply(1:7,function(x){paste0("Cover_Type_",toString(x))}))
+            values$dataModel$Wilderness <- factor(values$dataModel$Cover_Type,labels=sapply(1:7,function(x){paste0("Wilderness",toString(x))}))
+            values$dataModel$Hillshade <- factor(values$dataModel$Cover_Type,labels=sapply(1:7,function(x){paste0("Hillshade",toString(x))}))
             modelTrain <- values$dataModel[idxs,]
             modelTest  <- values$dataModel[-idxs,]
             incProgress(amount = 0.1, message = "Partitioned data! Now training GLM...")

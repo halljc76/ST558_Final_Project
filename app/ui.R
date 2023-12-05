@@ -66,7 +66,11 @@ shinyUI(
                    accompanying the data, which can be found",
                    tags$a(href = "https://archive.ics.uci.edu/dataset/31/covertype", target = "_blank", HTML("here,")),
                    "shows no evidence of mass imputation.", style = "color:white"
-                 )
+                 ),
+                 h4(strong("For the Modeling tab"), " the data were subset under a stratified random sampling paradigm
+                    to 25000 rows according to the relative frequencies of the Cover Type response variable. This was done
+                    such that the application would run in a feasible amount of time and on a wider range of computers, as
+                    random forest modeling (used in this application) is memory-costly.",style = "color:white")
           )
         ),
         style = "margin-left:10px;"
