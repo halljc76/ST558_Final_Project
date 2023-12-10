@@ -290,6 +290,7 @@ shinyUI(
                                  choices = NULL, multiple = T),
                      
                      hr(),
+                     h4("Please note that the training process can take multiple hours."),
                      actionButton("trainModels", label = "Train Both Models")
                    ),
                    mainPanel(

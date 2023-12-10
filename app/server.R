@@ -353,6 +353,8 @@ shinyServer(
             })
             
             incProgress(amount = 0.4, message = "Done!")
+            saveRDS(values$mlr, "models/mlr_pretrain_150K.Rds")
+            saveRDS(values$rf, "models/rf_pretrain150K.Rds")
           }
         )
       }
